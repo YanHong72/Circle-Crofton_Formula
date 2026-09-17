@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Numerical Computation of Crofton's Formula for a Circle</title>
-  <meta name="description" content="Numerical computation of Crofton's formula using a hand-drawn curve and randomly placed circles.">
+  <title>Numerical Computation of Crofton's Formula</title>
+  <meta name="description" content="Numerical computation of Crofton's formula using a hand-drawn curve and random circles or lines.">
   <link rel="canonical" href="https://yanhong72.github.io/Circle-Crofton_Formula/">
   <script>
     try {
@@ -16,13 +16,13 @@
     } catch (_) {}
   </script>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101924'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23f2a65a' stroke-width='5'/%3E%3Cpath d='M10 39C20 12 33 55 54 20' fill='none' stroke='%236ed6c8' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20260918-4">
+  <link rel="stylesheet" href="./styles.css?v=20260918-5">
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
       <div>
-        <h1>Numerical Computation of Crofton's Formula for a Circle</h1>
+        <h1>Numerical Computation of Crofton's Formula</h1>
       </div>
       <div class="topbar-actions">
         <div class="display-controls">
@@ -32,9 +32,20 @@
           </button>
           <button id="languageToggle" class="language-toggle" type="button" aria-label="Switch to English">EN</button>
         </div>
-        <p class="intro" data-i18n="intro">在座標區內一筆畫出曲線，再用隨機圓估計它的長度。</p>
+        <p class="intro" data-i18n="intro">在座標區內一筆畫出曲線，再用隨機圓或隨機直線估計它的長度。</p>
       </div>
     </header>
+
+    <nav class="experiment-tabs" aria-label="Crofton 實驗類型">
+      <button id="circleTab" class="experiment-tab active" type="button" aria-selected="true" data-mode="circle">
+        <span class="tab-symbol" aria-hidden="true">○</span>
+        <span data-i18n="circleTab">隨機圓</span>
+      </button>
+      <button id="lineTab" class="experiment-tab" type="button" aria-selected="false" data-mode="line">
+        <span class="tab-symbol" aria-hidden="true">╱</span>
+        <span data-i18n="lineTab">隨機直線</span>
+      </button>
+    </nav>
 
     <section class="workspace" aria-label="曲線交點實驗">
       <aside class="panel controls">
@@ -43,11 +54,11 @@
         </div>
 
         <label class="field">
-          <span class="field-label"><span data-i18n="circleCount">圓的數量</span> <small class="field-limit" data-i18n="circleCountLimit">請輸入 10～50,000</small></span>
+          <span class="field-label"><span id="objectCountLabel">圓的數量</span> <small id="objectCountLimit" class="field-limit">請輸入 10～50,000</small></span>
           <input id="circleCount" type="number" min="10" max="50000" step="10" value="1000" inputmode="numeric">
         </label>
 
-        <label class="field">
+        <label id="radiusField" class="field">
           <span class="field-label"><span data-i18n="fixedRadius">固定半徑</span> <small class="field-limit" data-i18n="radiusLimit">範圍 0.02～1.00</small></span>
           <div class="range-row">
             <input id="radius" type="range" min="0.02" max="1" step="0.01" value="0.18">
@@ -69,11 +80,11 @@
         </div>
 
         <div class="toggles" aria-label="圖層顯示">
-          <label><input id="showCircles" type="checkbox" checked><span data-i18n="showCircles">顯示圓</span></label>
+          <label><input id="showObjects" type="checkbox" checked><span id="showObjectsLabel">顯示圓</span></label>
           <label><input id="showHits" type="checkbox" checked><span data-i18n="showHits">顯示交點</span></label>
         </div>
 
-        <button id="runButton" class="primary" type="button" data-i18n="run">產生圓並計算</button>
+        <button id="runButton" class="primary" type="button">產生圓並計算</button>
         <button id="clearButton" class="secondary" type="button" data-i18n="clear">清除曲線</button>
       </aside>
 
@@ -113,7 +124,7 @@
         <div class="metric">
           <span data-i18n="formulaEstimate">公式估計值</span>
           <strong id="estimate">—</strong>
-          <small data-i18n="formulaEstimateExpression">(交點總數 ÷ 圓數) × 16 ÷ (4 × 半徑)</small>
+          <small id="formulaEstimateExpression">(交點總數 ÷ 圓數) × 16 ÷ (4 × 半徑)</small>
         </div>
         <div class="quality">
           <span data-i18n="estimateError">估計誤差</span>
@@ -123,7 +134,7 @@
       </aside>
     </section>
 
-    <section class="theory" aria-labelledby="theoryTitle">
+    <section id="circleTheory" class="theory" aria-labelledby="theoryTitle">
       <div class="theory-heading">
         <p class="eyebrow">THE MATHEMATICS</p>
         <h2 id="theoryTitle" data-i18n="theoryTitle">Crofton 圓公式與本網站的數值方法</h2>
@@ -164,6 +175,46 @@
       </article>
     </section>
 
+    <section id="lineTheory" class="theory" aria-labelledby="lineTheoryTitle" hidden>
+      <div class="theory-heading">
+        <p class="eyebrow">THE MATHEMATICS</p>
+        <h2 id="lineTheoryTitle" data-i18n="lineTheoryTitle">Crofton 直線公式與本網站的數值方法</h2>
+      </div>
+
+      <article class="theory-card proposition-card">
+        <span class="theory-index">i</span>
+        <div>
+          <h3 data-i18n="linePropTitle">Crofton 直線公式</h3>
+          <p data-i18n="linePropBody">令 C 是長度為 L 的平面曲線，G 表示平面上的直線。對所有直線積分，並計算每條直線和曲線的交點數，可得到：</p>
+          <div class="formula" aria-label="One half of the integral of the number of intersections equals L">
+            <span class="fraction">1/2</span><span class="integral">∫</span><span>#(G ∩ C)&nbsp; dG = L</span>
+          </div>
+          <p class="formula-note" data-i18n="linePropMeaning">其中 #(G ∩ C) 是直線 G 與曲線 C 的交點個數，dG 表示對不同方向與不同位置的直線進行積分。</p>
+        </div>
+      </article>
+
+      <article class="theory-card method-card">
+        <span class="theory-index">ii</span>
+        <div>
+          <h3 data-i18n="lineMethodTitle">如何轉成網站上的數值計算</h3>
+          <ol>
+            <li data-i18n="lineMethodStep1">你在 [−2, 2] × [−2, 2] 的區域畫出曲線，程式把手繪軌跡記錄成依序排列的資料點。</li>
+            <li data-i18n="lineMethodStep2">每條直線寫成 x cos(θ) + y sin(θ) = p。程式均勻抽取方向 θ ∈ [0, π) 與位置 p ∈ [−2√2, 2√2]；這個 p 範圍涵蓋所有可能穿過畫布的直線。</li>
+            <li data-i18n="lineMethodStep3">對每條直線計算它與資料折線的交點數，再將所有交點數加總為 N，因此每條直線的平均交點數是 N/m。</li>
+            <li data-i18n="lineMethodStep4">(θ, p) 的抽樣區域大小是 π × 4√2。把參數區域切成許多相同大小的小格，交點數積分除以參數區域大小，就是各格交點數的平均；均勻抽取很多直線後，可寫成：</li>
+          </ol>
+          <div class="formula average-formula">
+            <span data-i18n="lineAverageEquation">N/m ≈ [1/(4√2π)] ∫ #(G ∩ C) dG</span>
+          </div>
+          <p class="formula-note" data-i18n="lineSolveForLength">配合 ½∫ #(G ∩ C) dG = L，可得到網站使用的曲線長度估計式：</p>
+          <div class="formula estimate-formula">
+            <span>L̂ = </span><span data-i18n="lineEstimateEquation">(N ÷ 直線數量) × 2√2π</span>
+          </div>
+          <p class="formula-note" data-i18n="lineMethodNote">直線數量越多，抽樣結果通常越穩定；網站同時用手繪資料點直接計算折線長度，讓你比較公式估計值和資料值。</p>
+        </div>
+      </article>
+    </section>
+
     <footer class="site-footer">
       <p class="footer-contact">
         <span data-i18n="contactEmail">聯絡信箱</span>
@@ -187,6 +238,6 @@
     if (location.hostname !== "yanhong72.github.io") window.goatcounter = { no_onload: true };
   </script>
   <script data-goatcounter="https://crofton-formula.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-  <script src="./app.js?v=20260918-4"></script>
+  <script src="./app.js?v=20260918-5"></script>
 </body>
 </html>

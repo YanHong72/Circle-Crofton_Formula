@@ -5,10 +5,15 @@
   const DOMAIN_MAX = 2;
   const DOMAIN_SIZE = DOMAIN_MAX - DOMAIN_MIN;
   const DOMAIN_AREA = DOMAIN_SIZE * DOMAIN_SIZE;
+  const LINE_OFFSET_MAX = 2 * Math.SQRT2;
+  const LINE_PARAMETER_AREA = Math.PI * (2 * LINE_OFFSET_MAX);
   const canvas = document.querySelector("#plot");
   const wrap = document.querySelector("#canvasWrap");
   const ctx = canvas.getContext("2d");
   const countInput = document.querySelector("#circleCount");
+  const objectCountLabel = document.querySelector("#objectCountLabel");
+  const objectCountLimit = document.querySelector("#objectCountLimit");
+  const radiusField = document.querySelector("#radiusField");
   const radiusInput = document.querySelector("#radius");
   const radiusValue = document.querySelector("#radiusValue");
   const seedInput = document.querySelector("#seed");
@@ -19,7 +24,8 @@
   const themeToggle = document.querySelector("#themeToggle");
   const themeIcon = document.querySelector("#themeIcon");
   const themeLabel = document.querySelector("#themeLabel");
-  const showCircles = document.querySelector("#showCircles");
+  const showObjects = document.querySelector("#showObjects");
+  const showObjectsLabel = document.querySelector("#showObjectsLabel");
   const showHits = document.querySelector("#showHits");
   const runButton = document.querySelector("#runButton");
   const clearButton = document.querySelector("#clearButton");
@@ -30,12 +36,19 @@
   const estimateOutput = document.querySelector("#estimate");
   const errorOutput = document.querySelector("#errorRate");
   const resultHint = document.querySelector("#resultHint");
+  const formulaEstimateExpression = document.querySelector("#formulaEstimateExpression");
+  const circleTab = document.querySelector("#circleTab");
+  const lineTab = document.querySelector("#lineTab");
+  const circleTheory = document.querySelector("#circleTheory");
+  const lineTheory = document.querySelector("#lineTheory");
 
   let points = [];
   let circles = [];
+  let lines = [];
   let hitPoints = [];
   let drawing = false;
   let lastResult = null;
+  let experimentMode = localStorage.getItem("crofton-experiment-mode") === "line" ? "line" : "circle";
   let currentLanguage = localStorage.getItem("crofton-language") === "en" ? "en" : "zh";
   const savedTheme = localStorage.getItem("crofton-theme");
   const deviceTheme = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
@@ -44,7 +57,8 @@
 
   const translations = {
     zh: {
-      intro: "在座標區內一筆畫出曲線，再用隨機圓估計它的長度。",
+      intro: "在座標區內一筆畫出曲線，再用隨機圓或隨機直線估計它的長度。",
+      circleTab: "隨機圓", lineTab: "隨機直線",
       settingsTitle: "實驗設定", circleCount: "圓的數量", circleCountLimit: "請輸入 10～50,000",
       fixedRadius: "固定半徑", radiusLimit: "範圍 0.02～1.00", randomSeed: "亂數種子",
       randomEveryTime: "每次隨機", fixedSeed: "固定種子", fixedSeedNumber: "固定種子數字",
@@ -71,10 +85,24 @@
       estimateEquation: "(N ÷ 圓的數量) × A ÷ (4r)",
       methodNote: "圓的數量越多，抽樣通常越穩定；網站同時用手繪資料點直接計算折線長度，讓你比較理論估計值和資料值。",
       boundaryNote: "邊界提醒：Crofton 公式原本對所有圓心位置積分。本網站只在方形區域內抽樣，因此曲線若太靠近邊界，部分圓心落在區域外卻仍會與曲線相交，估計值可能偏低。",
+      lineTheoryTitle: "Crofton 直線公式與本網站的數值方法",
+      linePropTitle: "Crofton 直線公式",
+      linePropBody: "令 C 是長度為 L 的平面曲線，G 表示平面上的直線。對所有直線積分，並計算每條直線和曲線的交點數，可得到：",
+      linePropMeaning: "其中 #(G ∩ C) 是直線 G 與曲線 C 的交點個數，dG 表示對不同方向與不同位置的直線進行積分。",
+      lineMethodTitle: "如何轉成網站上的數值計算",
+      lineMethodStep1: "你在 [−2, 2] × [−2, 2] 的區域畫出曲線，程式把手繪軌跡記錄成依序排列的資料點。",
+      lineMethodStep2: "每條直線寫成 x cos(θ) + y sin(θ) = p。程式均勻抽取方向 θ ∈ [0, π) 與位置 p ∈ [−2√2, 2√2]；這個 p 範圍涵蓋所有可能穿過畫布的直線。",
+      lineMethodStep3: "對每條直線計算它與資料折線的交點數，再將所有交點數加總為 N，因此每條直線的平均交點數是 N/m。",
+      lineMethodStep4: "(θ, p) 的抽樣區域大小是 π × 4√2。把參數區域切成許多相同大小的小格，交點數積分除以參數區域大小，就是各格交點數的平均；均勻抽取很多直線後，可寫成：",
+      lineAverageEquation: "N/m ≈ [1/(4√2π)] ∫ #(G ∩ C) dG",
+      lineSolveForLength: "配合 ½∫ #(G ∩ C) dG = L，可得到網站使用的曲線長度估計式：",
+      lineEstimateEquation: "(N ÷ 直線數量) × 2√2π",
+      lineMethodNote: "直線數量越多，抽樣結果通常越穩定；網站同時用手繪資料點直接計算折線長度，讓你比較公式估計值和資料值。",
       contactEmail: "聯絡信箱", siteVisits: "網站造訪數", siteVisitsNote: "同一個工作階段只計一次",
     },
     en: {
-      intro: "Draw a curve in one stroke, then estimate its length using randomly placed circles.",
+      intro: "Draw a curve in one stroke, then estimate its length using random circles or random lines.",
+      circleTab: "Random circles", lineTab: "Random lines",
       settingsTitle: "Experiment settings", circleCount: "Number of circles", circleCountLimit: "Enter 10–50,000",
       fixedRadius: "Fixed radius", radiusLimit: "Range 0.02–1.00", randomSeed: "Random seed",
       randomEveryTime: "New each run", fixedSeed: "Fixed seed", fixedSeedNumber: "Seed number",
@@ -101,6 +129,19 @@
       estimateEquation: "(N ÷ number of circles) × A ÷ (4r)",
       methodNote: "More circles usually make the sample average more stable. The site also computes the polyline length directly from the drawn points so you can compare the theoretical estimate with the data value.",
       boundaryNote: "Boundary note: Crofton's formula integrates over every possible center location. This site samples only inside the square, so a curve near the boundary can be intersected by circles whose centers lie outside the sampled region, causing a low estimate.",
+      lineTheoryTitle: "Crofton's line formula and our numerical method",
+      linePropTitle: "Crofton's formula for lines",
+      linePropBody: "Let C be a plane curve of length L, and let G denote a line in the plane. Integrating the intersection count over all lines gives:",
+      linePropMeaning: "Here, #(G ∩ C) is the number of intersections between line G and curve C, while dG integrates over different line directions and positions.",
+      lineMethodTitle: "From the formula to this numerical experiment",
+      lineMethodStep1: "You draw a curve inside [−2, 2] × [−2, 2], and the program records the stroke as an ordered sequence of data points.",
+      lineMethodStep2: "Each line is written as x cos(θ) + y sin(θ) = p. The program samples θ ∈ [0, π) and p ∈ [−2√2, 2√2] uniformly. This p range includes every line that can cross the canvas.",
+      lineMethodStep3: "For each line, the program counts its intersections with the data polyline and adds them to obtain N. The average number of intersections per line is N/m.",
+      lineMethodStep4: "The sampled (θ, p) parameter region has size π × 4√2. Divide it into many equal cells: the intersection-count integral divided by the parameter-region size is the average count across those cells. With many uniformly sampled lines:",
+      lineAverageEquation: "N/m ≈ [1/(4√2π)] ∫ #(G ∩ C) dG",
+      lineSolveForLength: "Combining this with ½∫ #(G ∩ C) dG = L gives the length estimate used by the site:",
+      lineEstimateEquation: "(N ÷ number of lines) × 2√2π",
+      lineMethodNote: "More lines usually make the sample result more stable. The site also computes the polyline length directly from the drawn points so you can compare the formula estimate with the data value.",
       contactEmail: "Contact", siteVisits: "Site visits", siteVisitsNote: "One count per browsing session",
     },
   };
@@ -109,21 +150,59 @@
     return translations[currentLanguage][key] ?? key;
   }
 
+  function defaultResultHint() {
+    if (experimentMode === "line") return currentLanguage === "en" ? "Draw a curve, then select “Generate lines and calculate.”" : "畫完曲線後按「產生直線並計算」。";
+    return t("resultHint");
+  }
+
   function applyLanguage() {
     document.documentElement.lang = currentLanguage === "en" ? "en" : "zh-Hant";
     document.querySelectorAll("[data-i18n]").forEach(element => {
       element.textContent = t(element.dataset.i18n);
     });
+    updateModeContent();
     languageToggle.textContent = currentLanguage === "en" ? "中文" : "EN";
     languageToggle.setAttribute("aria-label", currentLanguage === "en" ? "切換成中文" : "Switch to English");
     updateThemeButton();
     if (lastResult) setResultSummary(lastResult);
-    else resultHint.textContent = t("resultHint");
+    else resultHint.textContent = defaultResultHint();
     if (!drawing) {
       drawStatus.textContent = points.length > 1
         ? (currentLanguage === "en" ? `${points.length} data points` : `${points.length} 個資料點`)
         : t("waitingToDraw");
     }
+  }
+
+  function updateModeContent() {
+    const isLine = experimentMode === "line";
+    const en = currentLanguage === "en";
+    circleTab.classList.toggle("active", !isLine);
+    lineTab.classList.toggle("active", isLine);
+    circleTab.setAttribute("aria-selected", String(!isLine));
+    lineTab.setAttribute("aria-selected", String(isLine));
+    radiusField.hidden = isLine;
+    circleTheory.hidden = isLine;
+    lineTheory.hidden = !isLine;
+    objectCountLabel.textContent = isLine ? (en ? "Number of lines" : "直線的數量") : (en ? "Number of circles" : "圓的數量");
+    objectCountLimit.textContent = en ? "Enter 10–50,000" : "請輸入 10～50,000";
+    showObjectsLabel.textContent = isLine ? (en ? "Show lines" : "顯示直線") : (en ? "Show circles" : "顯示圓");
+    runButton.textContent = isLine ? (en ? "Generate lines and calculate" : "產生直線並計算") : (en ? "Generate circles and calculate" : "產生圓並計算");
+    formulaEstimateExpression.textContent = isLine
+      ? (en ? "(total intersections ÷ number of lines) × 2√2π" : "(交點總數 ÷ 直線數) × 2√2π")
+      : (en ? "(total intersections ÷ number of circles) × 16 ÷ (4 × radius)" : "(交點總數 ÷ 圓數) × 16 ÷ (4 × 半徑)");
+    document.querySelector('[data-i18n="seedExplanation"]').textContent = isLine
+      ? (en ? "Reusing the same number produces the same set of lines, making experiments easy to repeat and compare." : "固定同一個數字，就會產生相同的一組直線，方便重複比較。")
+      : t("seedExplanation");
+    document.querySelector(".workspace").setAttribute("aria-label", isLine ? (en ? "Random-line curve intersection experiment" : "隨機直線曲線交點實驗") : (en ? "Random-circle curve intersection experiment" : "隨機圓曲線交點實驗"));
+  }
+
+  function switchExperimentMode(mode) {
+    if (mode === experimentMode) return;
+    experimentMode = mode;
+    localStorage.setItem("crofton-experiment-mode", mode);
+    resetResults();
+    updateModeContent();
+    render();
   }
 
   function updateThemeButton() {
@@ -220,7 +299,7 @@
     const scale = canvas.clientWidth / DOMAIN_SIZE;
     const styles = getComputedStyle(document.documentElement);
 
-    if (showCircles.checked && circles.length) {
+    if (showObjects.checked && experimentMode === "circle" && circles.length) {
       ctx.strokeStyle = styles.getPropertyValue(circles.length > 3000 ? "--circle-faint" : "--circle-strong").trim();
       ctx.lineWidth = circles.length > 5000 ? 0.45 : 0.7;
       ctx.beginPath();
@@ -228,6 +307,21 @@
         const c = toCanvas(circle);
         ctx.moveTo(c.x + circle.r * scale, c.y);
         ctx.arc(c.x, c.y, circle.r * scale, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+    }
+
+    if (showObjects.checked && experimentMode === "line" && lines.length) {
+      ctx.strokeStyle = styles.getPropertyValue(lines.length > 3000 ? "--circle-faint" : "--circle-strong").trim();
+      ctx.lineWidth = lines.length > 5000 ? 0.45 : 0.7;
+      ctx.beginPath();
+      for (const line of lines) {
+        const segment = lineSegmentInDomain(line);
+        if (!segment) continue;
+        const start = toCanvas(segment[0]);
+        const end = toCanvas(segment[1]);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
       }
       ctx.stroke();
     }
@@ -299,38 +393,111 @@
     return found;
   }
 
+  function lineSegmentInDomain(line, tolerance = 1e-9) {
+    const nx = Math.cos(line.theta);
+    const ny = Math.sin(line.theta);
+    const candidates = [];
+    const add = (x, y) => {
+      if (x < DOMAIN_MIN - tolerance || x > DOMAIN_MAX + tolerance || y < DOMAIN_MIN - tolerance || y > DOMAIN_MAX + tolerance) return;
+      if (!candidates.some(point => Math.hypot(point.x - x, point.y - y) <= tolerance)) candidates.push({ x, y });
+    };
+    if (Math.abs(ny) > tolerance) {
+      add(DOMAIN_MIN, (line.offset - DOMAIN_MIN * nx) / ny);
+      add(DOMAIN_MAX, (line.offset - DOMAIN_MAX * nx) / ny);
+    }
+    if (Math.abs(nx) > tolerance) {
+      add((line.offset - DOMAIN_MIN * ny) / nx, DOMAIN_MIN);
+      add((line.offset - DOMAIN_MAX * ny) / nx, DOMAIN_MAX);
+    }
+    if (candidates.length < 2) return null;
+    let best = [candidates[0], candidates[1]];
+    let bestDistance = 0;
+    for (let i = 0; i < candidates.length; i++) {
+      for (let j = i + 1; j < candidates.length; j++) {
+        const distance = Math.hypot(candidates[j].x - candidates[i].x, candidates[j].y - candidates[i].y);
+        if (distance > bestDistance) {
+          bestDistance = distance;
+          best = [candidates[i], candidates[j]];
+        }
+      }
+    }
+    return best;
+  }
+
+  function intersectionsForLine(polyline, line) {
+    const found = [];
+    const tolerance = 1e-7;
+    const nx = Math.cos(line.theta);
+    const ny = Math.sin(line.theta);
+    const add = hit => {
+      if (!found.some(point => Math.hypot(point.x - hit.x, point.y - hit.y) <= tolerance)) found.push(hit);
+    };
+    for (let i = 1; i < polyline.length; i++) {
+      const p1 = polyline[i - 1];
+      const p2 = polyline[i];
+      const d1 = p1.x * nx + p1.y * ny - line.offset;
+      const d2 = p2.x * nx + p2.y * ny - line.offset;
+      const on1 = Math.abs(d1) <= tolerance;
+      const on2 = Math.abs(d2) <= tolerance;
+      if (on1 && on2) continue;
+      if (on1) { add(p1); continue; }
+      if (on2) { add(p2); continue; }
+      if ((d1 < 0 && d2 > 0) || (d2 < 0 && d1 > 0)) {
+        const t = d1 / (d1 - d2);
+        add({ x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) });
+      }
+    }
+    return found;
+  }
+
   function validateSettings() {
     const count = Math.round(Number(countInput.value));
     const radius = Number(radiusInput.value);
     const seedMode = selectedSeedMode();
     const seed = seedMode === "fixed" ? Math.trunc(Number(seedInput.value)) : randomSeed();
-    if (!Number.isFinite(count) || count < 10 || count > 50000) throw new Error(currentLanguage === "en" ? "Enter between 10 and 50,000 circles." : "圓的數量請輸入 10～50,000。");
-    if (!Number.isFinite(radius) || radius <= 0 || radius > 1) throw new Error(currentLanguage === "en" ? "Set the radius between 0.02 and 1." : "半徑請設定在 0.02～1。");
+    if (!Number.isFinite(count) || count < 10 || count > 50000) throw new Error(currentLanguage === "en" ? `Enter between 10 and 50,000 ${experimentMode === "line" ? "lines" : "circles"}.` : `${experimentMode === "line" ? "直線" : "圓"}的數量請輸入 10～50,000。`);
+    if (experimentMode === "circle" && (!Number.isFinite(radius) || radius <= 0 || radius > 1)) throw new Error(currentLanguage === "en" ? "Set the radius between 0.02 and 1." : "半徑請設定在 0.02～1。");
     if (seedMode === "fixed" && !Number.isFinite(seed)) throw new Error(currentLanguage === "en" ? "The fixed seed must be an integer." : "固定種子必須是整數。");
     countInput.value = String(count);
     if (seedMode === "fixed") seedInput.value = String(seed);
-    return { count, radius, seed, seedMode };
+    return { count, radius, seed, seedMode, mode: experimentMode };
   }
 
   function runExperiment(settings = validateSettings()) {
     if (points.length < 2) throw new Error(currentLanguage === "en" ? "Draw a curve on the canvas first." : "請先在畫布上畫一條曲線。");
     const random = mulberry32(settings.seed);
     circles = [];
+    lines = [];
     hitPoints = [];
     let totalHits = 0;
-    for (let i = 0; i < settings.count; i++) {
-      const circle = {
-        x: DOMAIN_MIN + random() * DOMAIN_SIZE,
-        y: DOMAIN_MIN + random() * DOMAIN_SIZE,
-        r: settings.radius,
-      };
-      circles.push(circle);
-      const hits = intersectionsForCircle(points, circle);
-      totalHits += hits.length;
-      hitPoints.push(...hits);
+    if (settings.mode === "line") {
+      for (let i = 0; i < settings.count; i++) {
+        const line = {
+          theta: random() * Math.PI,
+          offset: -LINE_OFFSET_MAX + random() * (2 * LINE_OFFSET_MAX),
+        };
+        lines.push(line);
+        const hits = intersectionsForLine(points, line);
+        totalHits += hits.length;
+        hitPoints.push(...hits);
+      }
+    } else {
+      for (let i = 0; i < settings.count; i++) {
+        const circle = {
+          x: DOMAIN_MIN + random() * DOMAIN_SIZE,
+          y: DOMAIN_MIN + random() * DOMAIN_SIZE,
+          r: settings.radius,
+        };
+        circles.push(circle);
+        const hits = intersectionsForCircle(points, circle);
+        totalHits += hits.length;
+        hitPoints.push(...hits);
+      }
     }
     const actualLength = curveLength(points);
-    const estimated = (totalHits / settings.count) * DOMAIN_AREA / (4 * settings.radius);
+    const estimated = settings.mode === "line"
+      ? (totalHits / settings.count) * LINE_PARAMETER_AREA / 2
+      : (totalHits / settings.count) * DOMAIN_AREA / (4 * settings.radius);
     const errorRate = actualLength > 0 ? Math.abs(estimated - actualLength) / actualLength * 100 : 0;
     lastResult = { totalHits, actualLength, estimated, errorRate, ...settings };
     totalHitsOutput.textContent = totalHits.toLocaleString("zh-Hant");
@@ -343,21 +510,25 @@
   }
 
   function setResultSummary(settings) {
+    const objectName = settings.mode === "line"
+      ? (currentLanguage === "en" ? "lines" : "條直線")
+      : (currentLanguage === "en" ? "circles" : "個圓");
     if (currentLanguage === "en") {
       const seedLabel = settings.seedMode === "random" ? `random seed for this run: ${settings.seed}` : `fixed seed: ${settings.seed}`;
-      resultHint.textContent = `Used ${settings.count.toLocaleString("en")} circles; ${seedLabel}.`;
+      resultHint.textContent = `Used ${settings.count.toLocaleString("en")} ${objectName}; ${seedLabel}.`;
     } else {
       const seedLabel = settings.seedMode === "random" ? `本次隨機種子 ${settings.seed}` : `固定種子 ${settings.seed}`;
-      resultHint.textContent = `已使用 ${settings.count.toLocaleString("zh-Hant")} 個圓；${seedLabel}。`;
+      resultHint.textContent = `已使用 ${settings.count.toLocaleString("zh-Hant")} ${objectName}；${seedLabel}。`;
     }
   }
 
   function resetResults() {
     circles = [];
+    lines = [];
     hitPoints = [];
     lastResult = null;
     for (const el of [totalHitsOutput, lengthOutput, estimateOutput, errorOutput]) el.textContent = "—";
-    resultHint.textContent = t("resultHint");
+    resultHint.textContent = defaultResultHint();
   }
 
   function startDrawing(event) {
@@ -414,8 +585,10 @@
 
   if (deviceTheme?.addEventListener) deviceTheme.addEventListener("change", handleDeviceThemeChange);
   else if (deviceTheme?.addListener) deviceTheme.addListener(handleDeviceThemeChange);
-  showCircles.addEventListener("change", render);
+  showObjects.addEventListener("change", render);
   showHits.addEventListener("change", render);
+  circleTab.addEventListener("click", () => switchExperimentMode("circle"));
+  lineTab.addEventListener("click", () => switchExperimentMode("line"));
   canvas.addEventListener("pointerdown", startDrawing);
   canvas.addEventListener("pointermove", continueDrawing);
   canvas.addEventListener("pointerup", endDrawing);
@@ -443,34 +616,40 @@
       context.registerTool({
         name: "configure_and_run_curve_experiment",
         title: "設定並執行曲線實驗",
-        description: "用目前畫布上的手繪曲線，設定圓數量、固定半徑和種子模式後執行交點實驗。",
+        description: "用目前畫布上的手繪曲線，設定隨機圓或隨機直線的數量與種子模式後執行交點實驗。",
         inputSchema: {
           type: "object",
           properties: {
-            circleCount: { type: "integer", minimum: 10, maximum: 50000 },
+            mode: { type: "string", enum: ["circle", "line"] },
+            count: { type: "integer", minimum: 10, maximum: 50000 },
             radius: { type: "number", minimum: 0.02, maximum: 1 },
             seedMode: { type: "string", enum: ["random", "fixed"] },
             seed: { type: "integer" },
           },
-          required: ["circleCount", "radius", "seedMode"],
+          required: ["mode", "count", "seedMode"],
           additionalProperties: false,
         },
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         execute(input) {
-          if (!input || !Number.isInteger(input.circleCount) || input.circleCount < 10 || input.circleCount > 50000 ||
-              !Number.isFinite(input.radius) || input.radius < 0.02 || input.radius > 1 ||
+          if (!input || !["circle", "line"].includes(input.mode) ||
+              !Number.isInteger(input.count) || input.count < 10 || input.count > 50000 ||
+              (input.mode === "circle" && (!Number.isFinite(input.radius) || input.radius < 0.02 || input.radius > 1)) ||
               !["random", "fixed"].includes(input.seedMode) || (input.seedMode === "fixed" && !Number.isInteger(input.seed))) {
             throw new Error("參數格式或範圍不正確。");
           }
-          countInput.value = String(input.circleCount);
-          radiusInput.value = String(input.radius);
-          radiusValue.textContent = Number(input.radius).toFixed(2);
+          if (input.mode !== experimentMode) switchExperimentMode(input.mode);
+          countInput.value = String(input.count);
+          const radius = input.mode === "circle" ? input.radius : Number(radiusInput.value);
+          if (input.mode === "circle") {
+            radiusInput.value = String(radius);
+            radiusValue.textContent = Number(radius).toFixed(2);
+          }
           const modeInput = seedModeInputs.find(item => item.value === input.seedMode);
           modeInput.checked = true;
           if (input.seedMode === "fixed") seedInput.value = String(input.seed);
           updateSeedMode();
           const seed = input.seedMode === "fixed" ? input.seed : randomSeed();
-          return runExperiment({ count: input.circleCount, radius: input.radius, seed, seedMode: input.seedMode });
+          return runExperiment({ count: input.count, radius, seed, seedMode: input.seedMode, mode: input.mode });
         },
       });
     } catch (error) { console.warn("WebMCP registration unavailable", error); }
