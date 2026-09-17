@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Numerical Computation of Crofton's Formula for a Circle</title>
+  <meta name="description" content="Numerical computation of Crofton's formula using a hand-drawn curve and randomly placed circles.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101924'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23f2a65a' stroke-width='5'/%3E%3Cpath d='M10 39C20 12 33 55 54 20' fill='none' stroke='%236ed6c8' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>Numerical Computation of Crofton's Formula for a Circle</h1>
+      </div>
+      <div class="topbar-actions">
+        <button id="languageToggle" class="language-toggle" type="button" aria-label="Switch to English">EN</button>
+        <p class="intro" data-i18n="intro">在座標區內一筆畫出曲線，再用隨機圓估計它的長度。</p>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="曲線交點實驗">
+      <aside class="panel controls">
+        <div class="panel-title">
+          <span data-i18n="settingsTitle">實驗設定</span><span class="step">01</span>
+        </div>
+
+        <label class="field">
+          <span class="field-label"><span data-i18n="circleCount">圓的數量</span> <small class="field-limit" data-i18n="circleCountLimit">請輸入 10～50,000</small></span>
+          <input id="circleCount" type="number" min="10" max="50000" step="10" value="1000" inputmode="numeric">
+        </label>
+
+        <label class="field">
+          <span class="field-label"><span data-i18n="fixedRadius">固定半徑</span> <small class="field-limit" data-i18n="radiusLimit">範圍 0.02～1.00</small></span>
+          <div class="range-row">
+            <input id="radius" type="range" min="0.02" max="1" step="0.01" value="0.18">
+            <output id="radiusValue">0.18</output>
+          </div>
+        </label>
+
+        <div class="field seed-field">
+          <span class="field-label" data-i18n="randomSeed">亂數種子</span>
+          <div class="seed-mode" role="radiogroup" aria-label="亂數種子模式">
+            <label class="seed-option"><input type="radio" name="seedMode" value="random"><span data-i18n="randomEveryTime">每次隨機</span></label>
+            <label class="seed-option"><input type="radio" name="seedMode" value="fixed" checked><span data-i18n="fixedSeed">固定種子</span></label>
+          </div>
+          <label id="seedValueRow" class="seed-value-row">
+            <span data-i18n="fixedSeedNumber">固定種子數字</span>
+            <input id="seed" type="number" step="1" value="42" inputmode="numeric">
+          </label>
+          <p id="seedExplanation" class="seed-explanation"><strong data-i18n="seedDefinition">種子是亂數的起點。</strong> <span data-i18n="seedExplanation">固定同一個數字，就會產生相同的一組圓，方便重複比較。</span></p>
+        </div>
+
+        <div class="toggles" aria-label="圖層顯示">
+          <label><input id="showCircles" type="checkbox" checked><span data-i18n="showCircles">顯示圓</span></label>
+          <label><input id="showHits" type="checkbox" checked><span data-i18n="showHits">顯示交點</span></label>
+        </div>
+
+        <button id="runButton" class="primary" type="button" data-i18n="run">產生圓並計算</button>
+        <button id="clearButton" class="secondary" type="button" data-i18n="clear">清除曲線</button>
+      </aside>
+
+      <section class="canvas-card">
+        <div class="canvas-heading">
+          <div>
+            <span class="step">02</span>
+            <strong data-i18n="drawCurve">一筆畫曲線</strong>
+          </div>
+          <span id="drawStatus" class="status" data-i18n="waitingToDraw">等待下筆</span>
+        </div>
+        <div id="canvasWrap" class="canvas-wrap">
+          <canvas id="plot" aria-label="座標範圍負二到二的手繪曲線畫布"></canvas>
+          <div id="emptyHint" class="empty-hint">
+            <span class="gesture">↝</span>
+            <strong data-i18n="dragToDraw">按住並拖曳</strong>
+            <span data-i18n="mouseOrTouch">滑鼠或手指都可以</span>
+          </div>
+          <span class="axis-label x-min">−2</span><span class="axis-label x-max">2</span>
+          <span class="axis-label y-min">−2</span><span class="axis-label y-max">2</span>
+        </div>
+        <p class="canvas-note" data-i18n="canvasNote">座標範圍固定為 [−2, 2] × [−2, 2]。再次下筆會取代上一條曲線。</p>
+      </section>
+
+      <aside class="panel results" aria-live="polite">
+        <div class="panel-title">
+          <span data-i18n="resultsTitle">計算結果</span><span class="step">03</span>
+        </div>
+        <div class="metric accent">
+          <span data-i18n="totalIntersections">交點總數</span>
+          <strong id="totalHits">—</strong>
+        </div>
+        <div class="metric">
+          <span data-i18n="curveLength">曲線長度</span>
+          <strong id="curveLength">—</strong>
+          <small data-i18n="curveLengthNote">依手繪資料點逐段加總</small>
+        </div>
+        <div class="metric">
+          <span data-i18n="formulaEstimate">公式估計值</span>
+          <strong id="estimate">—</strong>
+          <small data-i18n="formulaEstimateExpression">(交點總數 ÷ 圓數) × 16 ÷ (4 × 半徑)</small>
+        </div>
+        <div class="quality">
+          <span data-i18n="estimateError">估計誤差</span>
+          <strong id="errorRate">—</strong>
+        </div>
+        <p id="resultHint" class="result-hint" data-i18n="resultHint">畫完曲線後按「產生圓並計算」。</p>
+      </aside>
+    </section>
+
+    <section class="theory" aria-labelledby="theoryTitle">
+      <div class="theory-heading">
+        <p class="eyebrow">THE MATHEMATICS</p>
+        <h2 id="theoryTitle" data-i18n="theoryTitle">Crofton 圓公式與本網站的數值方法</h2>
+      </div>
+
+      <article class="theory-card proposition-card">
+        <span class="theory-index">i</span>
+        <div>
+          <h3 data-i18n="propTitle">固定半徑圓的 Crofton 公式</h3>
+          <p data-i18n="propBody">令 γ(s) = (x(s), y(s)) 是以弧長參數化的曲線，曲線長度為 L，C 為曲線的像。令 Bᵣ = (a, b) 表示半徑固定為 r、圓心位於 (a, b) 的圓。Crofton 公式指出，對所有可能的圓心位置積分，圓與曲線的交點數會滿足：</p>
+          <div class="formula" aria-label="Integral of the number of intersections equals four r L">
+            <span class="integral">∫</span><span>#(B<sub>r</sub> ∩ C)&nbsp; dB<sub>r</sub> = 4rL</span>
+          </div>
+          <p class="formula-note" data-i18n="propMeaning">其中 #(Bᵣ ∩ C) 是該圓與曲線的交點個數。這個等式把「平均交點數」和曲線長度連在一起。</p>
+        </div>
+      </article>
+
+      <article class="theory-card method-card">
+        <span class="theory-index">ii</span>
+        <div>
+          <h3 data-i18n="methodTitle">如何轉成網站上的數值計算</h3>
+          <ol>
+            <li data-i18n="methodStep1">你在 [−2, 2] × [−2, 2] 的區域畫出曲線，程式把手繪軌跡記錄成依序排列的資料點。</li>
+            <li data-i18n="methodStep2">程式在面積 A = 16 的區域內均勻抽取 m 個圓心，所有圓都使用相同的半徑 r。均勻抽取表示區域中每一塊相同大小的面積，被選到的機會都一樣。</li>
+            <li data-i18n="methodStep3">對每個圓計算它與資料折線的交點數，再把所有交點數加總為 N，因此每個圓的平均交點數是 N/m。</li>
+            <li data-i18n="methodStep4">把圓心區域切成許多很小、等面積的格子時，交點數的積分除以總面積，就是各格子交點數的平均。隨機且均勻地取很多圓心，N/m 就會接近這個區域平均：</li>
+          </ol>
+          <div class="formula average-formula">
+            <span data-i18n="averageEquation">N/m ≈ (1/A) ∫ #(Bᵣ ∩ C) dBᵣ = 4rL/A</span>
+          </div>
+          <p class="formula-note" data-i18n="solveForLength">把等式兩邊乘上 A，再除以 4r，就得到網站使用的曲線長度估計式：</p>
+          <div class="formula estimate-formula">
+            <span>L̂ = </span><span data-i18n="estimateEquation">(N ÷ 圓的數量) × A ÷ (4r)</span>
+          </div>
+          <p class="formula-note" data-i18n="methodNote">圓的數量越多，抽樣通常越穩定；網站同時用手繪資料點直接計算折線長度，讓你比較理論估計值和資料值。</p>
+          <p class="boundary-note" data-i18n="boundaryNote">邊界提醒：Crofton 公式原本對所有圓心位置積分。本網站只在方形區域內抽樣，因此曲線若太靠近邊界，部分圓心落在區域外卻仍會與曲線相交，估計值可能偏低。</p>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
