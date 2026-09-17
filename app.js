@@ -16,6 +16,9 @@
   const seedValueRow = document.querySelector("#seedValueRow");
   const seedExplanation = document.querySelector("#seedExplanation");
   const languageToggle = document.querySelector("#languageToggle");
+  const themeToggle = document.querySelector("#themeToggle");
+  const themeIcon = document.querySelector("#themeIcon");
+  const themeLabel = document.querySelector("#themeLabel");
   const showCircles = document.querySelector("#showCircles");
   const showHits = document.querySelector("#showHits");
   const runButton = document.querySelector("#runButton");
@@ -34,6 +37,10 @@
   let drawing = false;
   let lastResult = null;
   let currentLanguage = localStorage.getItem("crofton-language") === "en" ? "en" : "zh";
+  const savedTheme = localStorage.getItem("crofton-theme");
+  const deviceTheme = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  let followsDeviceTheme = savedTheme !== "light" && savedTheme !== "dark";
+  let currentTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 
   const translations = {
     zh: {
@@ -49,6 +56,7 @@
       curveLengthNote: "依手繪資料點逐段加總", formulaEstimate: "公式估計值",
       formulaEstimateExpression: "(交點總數 ÷ 圓數) × 16 ÷ (4 × 半徑)", estimateError: "估計誤差",
       resultHint: "畫完曲線後按「產生圓並計算」。",
+      lightMode: "日間模式", darkMode: "夜間模式", switchToLight: "切換到日間模式", switchToDark: "切換到夜間模式",
       theoryTitle: "Crofton 圓公式與本網站的數值方法",
       propTitle: "固定半徑圓的 Crofton 公式",
       propBody: "令 γ(s) = (x(s), y(s)) 是以弧長參數化的曲線，曲線長度為 L，C 為曲線的像。令 Bᵣ = (a, b) 表示半徑固定為 r、圓心位於 (a, b) 的圓。Crofton 公式指出，對所有可能的圓心位置積分，圓與曲線的交點數會滿足：",
@@ -77,6 +85,7 @@
       curveLengthNote: "Sum of distances between drawn data points", formulaEstimate: "Formula estimate",
       formulaEstimateExpression: "(total intersections ÷ number of circles) × 16 ÷ (4 × radius)", estimateError: "Estimation error",
       resultHint: "Draw a curve, then select “Generate circles and calculate.”",
+      lightMode: "Light mode", darkMode: "Dark mode", switchToLight: "Switch to light mode", switchToDark: "Switch to dark mode",
       theoryTitle: "Crofton's circle formula and our numerical method",
       propTitle: "Crofton's formula for circles of fixed radius",
       propBody: "Let γ(s) = (x(s), y(s)) be a curve parametrized by arc length, with total length L, and let C be its image. Let Bᵣ = (a, b) denote a circle of fixed radius r centered at (a, b). Integrating the number of intersections over all possible center locations gives:",
@@ -105,6 +114,7 @@
     });
     languageToggle.textContent = currentLanguage === "en" ? "中文" : "EN";
     languageToggle.setAttribute("aria-label", currentLanguage === "en" ? "切換成中文" : "Switch to English");
+    updateThemeButton();
     if (lastResult) setResultSummary(lastResult);
     else resultHint.textContent = t("resultHint");
     if (!drawing) {
@@ -112,6 +122,20 @@
         ? (currentLanguage === "en" ? `${points.length} data points` : `${points.length} 個資料點`)
         : t("waitingToDraw");
     }
+  }
+
+  function updateThemeButton() {
+    const isLight = currentTheme === "light";
+    themeIcon.textContent = isLight ? "☀" : "☾";
+    themeLabel.textContent = t(isLight ? "lightMode" : "darkMode");
+    themeToggle.setAttribute("aria-label", t(isLight ? "switchToDark" : "switchToLight"));
+    themeToggle.setAttribute("aria-pressed", String(isLight));
+  }
+
+  function applyTheme() {
+    document.documentElement.dataset.theme = currentTheme;
+    updateThemeButton();
+    render();
   }
 
   function mulberry32(seed) {
@@ -175,14 +199,15 @@
 
   function drawGrid() {
     const size = canvas.clientWidth;
-    ctx.fillStyle = "#0b141e";
+    const styles = getComputedStyle(document.documentElement);
+    ctx.fillStyle = styles.getPropertyValue("--canvas-bg").trim();
     ctx.fillRect(0, 0, size, size);
     ctx.lineWidth = 1;
     for (let value = DOMAIN_MIN; value <= DOMAIN_MAX + 1e-9; value += 0.5) {
       const x = ((value - DOMAIN_MIN) / DOMAIN_SIZE) * size;
       const y = ((DOMAIN_MAX - value) / DOMAIN_SIZE) * size;
       const major = Math.abs(value) < 1e-9;
-      ctx.strokeStyle = major ? "rgba(145,162,179,.42)" : "rgba(145,162,179,.12)";
+      ctx.strokeStyle = styles.getPropertyValue(major ? "--grid-major" : "--grid-minor").trim();
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
     }
@@ -191,9 +216,10 @@
   function render() {
     drawGrid();
     const scale = canvas.clientWidth / DOMAIN_SIZE;
+    const styles = getComputedStyle(document.documentElement);
 
     if (showCircles.checked && circles.length) {
-      ctx.strokeStyle = circles.length > 3000 ? "rgba(242,166,90,.05)" : "rgba(242,166,90,.12)";
+      ctx.strokeStyle = styles.getPropertyValue(circles.length > 3000 ? "--circle-faint" : "--circle-strong").trim();
       ctx.lineWidth = circles.length > 5000 ? 0.45 : 0.7;
       ctx.beginPath();
       for (const circle of circles) {
@@ -205,7 +231,7 @@
     }
 
     if (points.length > 1) {
-      ctx.strokeStyle = "#6ed6c8";
+      ctx.strokeStyle = styles.getPropertyValue("--curve-color").trim();
       ctx.lineWidth = 3;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
@@ -220,7 +246,7 @@
     }
 
     if (showHits.checked && hitPoints.length) {
-      ctx.fillStyle = "rgba(255,107,98,.8)";
+      ctx.fillStyle = styles.getPropertyValue("--hit-color").trim();
       for (const hit of hitPoints) {
         const p = toCanvas(hit);
         ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2); ctx.fill();
@@ -371,6 +397,21 @@
     localStorage.setItem("crofton-language", currentLanguage);
     applyLanguage();
   });
+  themeToggle.addEventListener("click", () => {
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    followsDeviceTheme = false;
+    localStorage.setItem("crofton-theme", currentTheme);
+    applyTheme();
+  });
+
+  function handleDeviceThemeChange(event) {
+    if (!followsDeviceTheme) return;
+    currentTheme = event.matches ? "dark" : "light";
+    applyTheme();
+  }
+
+  if (deviceTheme?.addEventListener) deviceTheme.addEventListener("change", handleDeviceThemeChange);
+  else if (deviceTheme?.addListener) deviceTheme.addListener(handleDeviceThemeChange);
   showCircles.addEventListener("change", render);
   showHits.addEventListener("change", render);
   canvas.addEventListener("pointerdown", startDrawing);
@@ -434,6 +475,7 @@
   }
 
   window.addEventListener("resize", resizeCanvas);
+  applyTheme();
   applyLanguage();
   updateSeedMode();
   resizeCanvas();
