@@ -30,6 +30,7 @@
   const estimateOutput = document.querySelector("#estimate");
   const errorOutput = document.querySelector("#errorRate");
   const resultHint = document.querySelector("#resultHint");
+  const siteVisitCount = document.querySelector("#siteVisitCount");
 
   let points = [];
   let circles = [];
@@ -71,6 +72,7 @@
       estimateEquation: "(N ÷ 圓的數量) × A ÷ (4r)",
       methodNote: "圓的數量越多，抽樣通常越穩定；網站同時用手繪資料點直接計算折線長度，讓你比較理論估計值和資料值。",
       boundaryNote: "邊界提醒：Crofton 公式原本對所有圓心位置積分。本網站只在方形區域內抽樣，因此曲線若太靠近邊界，部分圓心落在區域外卻仍會與曲線相交，估計值可能偏低。",
+      contactEmail: "聯絡信箱", siteVisits: "網站造訪數", siteVisitsNote: "同一個工作階段只計一次",
     },
     en: {
       intro: "Draw a curve in one stroke, then estimate its length using randomly placed circles.",
@@ -100,6 +102,7 @@
       estimateEquation: "(N ÷ number of circles) × A ÷ (4r)",
       methodNote: "More circles usually make the sample average more stable. The site also computes the polyline length directly from the drawn points so you can compare the theoretical estimate with the data value.",
       boundaryNote: "Boundary note: Crofton's formula integrates over every possible center location. This site samples only inside the square, so a curve near the boundary can be intersected by circles whose centers lie outside the sampled region, causing a low estimate.",
+      contactEmail: "Contact", siteVisits: "Site visits", siteVisitsNote: "One count per browsing session",
     },
   };
 
@@ -136,6 +139,19 @@
     document.documentElement.dataset.theme = currentTheme;
     updateThemeButton();
     render();
+  }
+
+  async function loadSiteVisitCount() {
+    try {
+      const response = await fetch("https://crofton-formula.goatcounter.com/counter/TOTAL.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Counter returned ${response.status}`);
+      const data = await response.json();
+      if (typeof data.count !== "string" && typeof data.count !== "number") throw new Error("Counter response is invalid");
+      siteVisitCount.textContent = String(data.count);
+    } catch (error) {
+      siteVisitCount.textContent = "—";
+      console.warn("Visit count unavailable", error);
+    }
   }
 
   function mulberry32(seed) {
@@ -479,5 +495,6 @@
   applyLanguage();
   updateSeedMode();
   resizeCanvas();
+  loadSiteVisitCount();
   registerWebMCP();
 })();

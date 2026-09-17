@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Numerical Computation of Crofton's Formula for a Circle</title>
   <meta name="description" content="Numerical computation of Crofton's formula using a hand-drawn curve and randomly placed circles.">
+  <link rel="canonical" href="https://yanhong72.github.io/Circle-Crofton_Formula/">
   <script>
     try {
       const savedTheme = localStorage.getItem("crofton-theme");
@@ -15,7 +16,7 @@
     } catch (_) {}
   </script>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101924'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23f2a65a' stroke-width='5'/%3E%3Cpath d='M10 39C20 12 33 55 54 20' fill='none' stroke='%236ed6c8' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20260917-1">
+  <link rel="stylesheet" href="./styles.css?v=20260918-3">
 </head>
 <body>
   <main class="shell">
@@ -162,7 +163,25 @@
         </div>
       </article>
     </section>
+
+    <footer class="site-footer">
+      <p class="footer-contact">
+        <span data-i18n="contactEmail">聯絡信箱</span>
+        <a href="mailto:cyanhong72@gmail.com">cyanhong72@gmail.com</a>
+      </p>
+      <div class="footer-visits">
+        <p>
+          <span data-i18n="siteVisits">網站造訪數</span>
+          <strong id="siteVisitCount" aria-live="polite">—</strong>
+        </p>
+        <small data-i18n="siteVisitsNote">同一個工作階段只計一次</small>
+      </div>
+    </footer>
   </main>
-  <script src="./app.js?v=20260917-1"></script>
+  <script>
+    if (location.hostname !== "yanhong72.github.io") window.goatcounter = { no_onload: true };
+  </script>
+  <script data-goatcounter="https://crofton-formula.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+  <script src="./app.js?v=20260918-3"></script>
 </body>
 </html>
