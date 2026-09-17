@@ -169,8 +169,8 @@ canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 .site-footer a { color: var(--teal); font-weight: 650; text-underline-offset: 3px; }
 .site-footer a:hover { text-decoration-thickness: 2px; }
 .footer-visits { display: grid; justify-items: end; gap: 4px; }
-.footer-visits p { display: flex; align-items: baseline; gap: 8px; }
-.footer-visits strong { color: var(--teal); font: 750 1rem/1 ui-monospace, monospace; }
+.footer-visits p { display: flex; align-items: center; gap: 10px; }
+.site-visit-counter { display: block; width: 134px; height: 40px; }
 .footer-visits small { color: var(--metric-note); font-size: .74rem; }
 
 @media (max-width: 1050px) {

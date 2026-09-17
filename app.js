@@ -30,7 +30,6 @@
   const estimateOutput = document.querySelector("#estimate");
   const errorOutput = document.querySelector("#errorRate");
   const resultHint = document.querySelector("#resultHint");
-  const siteVisitCount = document.querySelector("#siteVisitCount");
 
   let points = [];
   let circles = [];
@@ -139,19 +138,6 @@
     document.documentElement.dataset.theme = currentTheme;
     updateThemeButton();
     render();
-  }
-
-  async function loadSiteVisitCount() {
-    try {
-      const response = await fetch("https://crofton-formula.goatcounter.com/counter/TOTAL.json", { cache: "no-store" });
-      if (!response.ok) throw new Error(`Counter returned ${response.status}`);
-      const data = await response.json();
-      if (typeof data.count !== "string" && typeof data.count !== "number") throw new Error("Counter response is invalid");
-      siteVisitCount.textContent = String(data.count);
-    } catch (error) {
-      siteVisitCount.textContent = "—";
-      console.warn("Visit count unavailable", error);
-    }
   }
 
   function mulberry32(seed) {
@@ -495,6 +481,5 @@
   applyLanguage();
   updateSeedMode();
   resizeCanvas();
-  loadSiteVisitCount();
   registerWebMCP();
 })();
