@@ -144,11 +144,11 @@
         <span class="theory-index">i</span>
         <div>
           <h3 data-i18n="propTitle">固定半徑圓的 Crofton 公式</h3>
-          <p data-i18n="propBody">令 γ(s) = (x(s), y(s)) 是以弧長參數化的曲線，曲線長度為 L，C 為曲線的像。令 Bᵣ = (a, b) 表示半徑固定為 r、圓心位於 (a, b) 的圓。Crofton 公式指出，對所有可能的圓心位置積分，圓與曲線的交點數會滿足：</p>
-          <div class="formula" aria-label="Integral of the number of intersections equals four r L">
-            <span class="integral">∫</span><span>#(B<sub>r</sub> ∩ C)&nbsp; dB<sub>r</sub> = 4rL</span>
+          <p data-i18n="propBody">令 γ(s) = (x(s), y(s)) 是以弧長參數化的曲線，曲線長度為 L，C 為曲線的像。令 Sᵣ = (a, b) 表示半徑固定為 r、圓心位於 (a, b) 的圓。Crofton 公式指出，對所有可能的圓心位置積分，圓與曲線的交點數會滿足：</p>
+          <div class="formula" aria-label="Integral of the number of intersections of S r and C equals four r L">
+            <span class="integral">∫</span><span>#(S<sub>r</sub> ∩ C)&nbsp; dS<sub>r</sub> = 4rL</span>
           </div>
-          <p class="formula-note" data-i18n="propMeaning">其中 #(Bᵣ ∩ C) 是該圓與曲線的交點個數。這個等式把「平均交點數」和曲線長度連在一起。</p>
+          <p class="formula-note" data-i18n="propMeaning">其中 #(Sᵣ ∩ C) 是該圓與曲線的交點個數。這個等式把「平均交點數」和曲線長度連在一起。</p>
         </div>
       </article>
 
@@ -163,7 +163,7 @@
             <li data-i18n="methodStep4">把圓心區域切成許多很小、等面積的格子時，交點數的積分除以總面積，就是各格子交點數的平均。隨機且均勻地取很多圓心，N/m 就會接近這個區域平均：</li>
           </ol>
           <div class="formula average-formula">
-            <span data-i18n="averageEquation">N/m ≈ (1/A) ∫ #(Bᵣ ∩ C) dBᵣ = 4rL/A</span>
+            <span data-i18n="averageEquation">N/m ≈ (1/A) ∫ #(Sᵣ ∩ C) dSᵣ = 4rL/A</span>
           </div>
           <p class="formula-note" data-i18n="solveForLength">把等式兩邊乘上 A，再除以 4r，就得到網站使用的曲線長度估計式：</p>
           <div class="formula estimate-formula">
@@ -238,6 +238,6 @@
     if (location.hostname !== "yanhong72.github.io") window.goatcounter = { no_onload: true };
   </script>
   <script data-goatcounter="https://crofton-formula.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
-  <script src="./app.js?v=20260918-5"></script>
+  <script src="./app.js?v=20260918-6"></script>
 </body>
 </html>
