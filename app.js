@@ -47,6 +47,7 @@
   let lines = [];
   let hitPoints = [];
   let drawing = false;
+  let activePointerId = null;
   let lastResult = null;
   let experimentMode = localStorage.getItem("crofton-experiment-mode") === "line" ? "line" : "circle";
   let currentLanguage = localStorage.getItem("crofton-language") === "en" ? "en" : "zh";
@@ -98,7 +99,7 @@
       lineSolveForLength: "配合 ½∫ #(G ∩ C) dG = L，可得到網站使用的曲線長度估計式：",
       lineEstimateEquation: "(N ÷ 直線數量) × 2√2π",
       lineMethodNote: "直線數量越多，抽樣結果通常越穩定；網站同時用手繪資料點直接計算折線長度，讓你比較公式估計值和資料值。",
-      contactEmail: "聯絡信箱", siteVisits: "網站造訪數", siteVisitsNote: "同一個工作階段只計一次",
+      contactEmail: "聯絡信箱", siteVisits: "網站造訪數", siteVisitsNote: "每位訪客約 8 小時內計一次；數字最多延遲 4 小時更新",
     },
     en: {
       intro: "Draw a curve in one stroke, then estimate its length using random circles or random lines.",
@@ -142,7 +143,7 @@
       lineSolveForLength: "Combining this with ½∫ #(G ∩ C) dG = L gives the length estimate used by the site:",
       lineEstimateEquation: "(N ÷ number of lines) × 2√2π",
       lineMethodNote: "More lines usually make the sample result more stable. The site also computes the polyline length directly from the drawn points so you can compare the formula estimate with the data value.",
-      contactEmail: "Contact", siteVisits: "Site visits", siteVisitsNote: "One count per browsing session",
+      contactEmail: "Contact", siteVisits: "Site visits", siteVisitsNote: "Each visitor is counted about once per 8 hours; updates may be delayed up to 4 hours",
     },
   };
 
@@ -533,6 +534,9 @@
 
   function startDrawing(event) {
     if (event.button !== undefined && event.button !== 0) return;
+    if (activePointerId !== null) return;
+    if (event.pointerType === "touch" && !event.isPrimary) return;
+    activePointerId = event.pointerId;
     drawing = true;
     points = [toDomain(event)];
     resetResults();
@@ -544,7 +548,7 @@
   }
 
   function continueDrawing(event) {
-    if (!drawing) return;
+    if (!drawing || event.pointerId !== activePointerId) return;
     const point = toDomain(event);
     const previous = points[points.length - 1];
     if (Math.hypot(point.x - previous.x, point.y - previous.y) >= 0.008) {
@@ -554,9 +558,11 @@
   }
 
   function endDrawing(event) {
-    if (!drawing) return;
+    if (!drawing || event.pointerId !== activePointerId) return;
     continueDrawing(event);
     drawing = false;
+    activePointerId = null;
+    if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     drawStatus.textContent = points.length > 1
       ? (currentLanguage === "en" ? `${points.length} data points` : `${points.length} 個資料點`)
       : (currentLanguage === "en" ? "Please redraw" : "請重新繪製");
